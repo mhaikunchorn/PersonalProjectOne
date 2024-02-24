@@ -28,7 +28,8 @@ SHEETS = [
 
 def extract_words():
     """Extracting the words and phrases from Google Sheets,
-    using an API."""
+    using an API.
+    """
     credentials=None
     if os.path.exists("token.json"):
         credentials=Credentials.from_authorized_user_file("token.json", SCOPES)
@@ -49,6 +50,8 @@ def extract_words():
 
             for row in values:
                 print(row)
+
+            # clean
 
     except HttpError as error:
         print(error)
