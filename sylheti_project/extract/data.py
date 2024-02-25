@@ -1,11 +1,14 @@
 """Extracting word from Google Sheets"""
 import os
-from pandas import read_csv, DataFrame
+import time
+from pandas import read_csv, DataFrame, concat
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+start_time = time.time()
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SPREADSHEET_ID = "14rwxC2XCKDYPk_n5eP0Q8kcNSpxNRL1LPWEqGip3IoQ"
@@ -16,18 +19,19 @@ SHEETS = [
     "Time & Frequency",
     "Food",
     "Phrases",
-    "Professions",
+    "Possessions",
     "Pronouns",
     "Body",
     "People",
-    "Affirmation & Negation"
+    "Affirmation & Negation",
     "Work",
     "Place & Travel",
     "Colours"
 ]
 
 def extract_words():
-    """Extracting the words and phrases from Google Sheets,
+    """
+    Extracting the words and phrases from Google Sheets,
     using an API.
     """
     credentials=None
@@ -42,19 +46,39 @@ def extract_words():
         with open("token.json", "w") as token:
             token.write(credentials.to_json())
     try:
+        dfs = []
         for sheet in SHEETS:
             service = build("sheets","v4", credentials=credentials)
             sheets = service.spreadsheets()
             result = sheets.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet).execute()
             values = result.get("values",[])
 
-            for row in values:
-                print(row)
+            dfs.append(values)
 
-            # clean
+        # create one big df
+        df = concat([DataFrame(sheet_data) for sheet_data in dfs],axis=0)
+
+        # --- cleaning the df
+        # Clean column names
+        df.columns = df.iloc[0]
+        df.columns = df.columns.str.lower()
+        df=df[1:]
+
+        # if the English words begin with a a first-person pronoun then capitalise
+
+        # make all sylheti words lowercase
+        df.sylheti = df.sylheti.str.lower()
+
+        print(df.info())
+        print("My program took", time.time() - start_time, "to run")
+
+        df.to_csv("test_df.csv",index=False)
+        
+        return df
 
     except HttpError as error:
         print(error)
+    
 
 if __name__ == "__main__":
     extract_words()
